@@ -17,11 +17,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        token: ${{ secrets.ACCESS_TOKEN }}
+        token: ${{ github.token }}
     - uses: cycjimmy/semantic-release-action@v2
       id: semantic
       env:
-        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
       with:
         dry_run: true
         semantic_version: 18.0.1
@@ -54,7 +54,7 @@ jobs:
       uses: actions/create-release@v1
       env:
         BUILD: ${{ needs.prepare.outputs.build_number }}
-        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
         VERSION: ${{ needs.prepare.outputs.release }}
       with:
         tag_name: ${{ env.VERSION }}.${{ env.BUILD }}
@@ -73,12 +73,12 @@ jobs:
     - name: Delete Previous drafts
       uses: hugo19941994/delete-draft-releases@v1.0.0
       env:
-        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
 
     - name: Create Draft Release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
       with:
         tag_name: ${{ needs.prepare.outputs.release }}
         release_name: ${{ needs.prepare.outputs.release }}
