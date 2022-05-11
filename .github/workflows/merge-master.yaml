@@ -95,7 +95,10 @@ jobs:
     runs-on: ubuntu-latest
     needs:
     - prepare
-    - build
+    - check
+    - test
+    - fmt
+    - clippy
     steps:
     - name: Create Pre Release
       uses: actions/create-release@v1
