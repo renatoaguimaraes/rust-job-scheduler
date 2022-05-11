@@ -1,0 +1,49 @@
+name: Released
+
+on:
+  release:
+    types:
+    - released
+
+jobs:
+  cancel_previous:
+    name: 'Cancel Previous Runs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+  prepare:
+    name: Extract Version and Build number
+    runs-on: ubuntu-latest
+    outputs:
+      build_number: ${{ steps.short_sha.outputs.value }}
+      version: ${{ steps.version.outputs.value }}
+    steps:
+    - name: Version
+      id: version
+      run: echo ::set-output name=value::${GITHUB_REF#refs/*/}
+    - uses: actions/checkout@v3
+    - name: Git Short sha
+      id: short_sha
+      run: echo "::set-output name=value::$(git rev-parse --short HEAD)"
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs:
+    - prepare
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
+
+
