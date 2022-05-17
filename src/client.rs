@@ -17,8 +17,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = WorkerServiceClient::new(channel);
     // creating a new Request
     let request = Request::new(StartRequest {
-        name: String::from("echo"),
-        args: vec![String::from("1"), String::from("2")],
+        name: String::from("sh"),
+        args: vec![
+            String::from("-c"),
+            String::from("while true; do date; sleep 1; done"),
+        ],
     });
     // sending request and waiting for response
     let response = client.start(request).await?.into_inner();

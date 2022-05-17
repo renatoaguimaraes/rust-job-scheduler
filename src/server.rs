@@ -1,6 +1,12 @@
+use env_logger;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use uuid::Uuid;
+
+mod lib;
+
+use lib::{Cmd, InMemoryWorker, Worker};
 
 pub mod worker {
     tonic::include_proto!("worker");
@@ -22,10 +28,15 @@ impl WorkerService for WorkerServiceServerImpl {
         request: Request<StartRequest>,
     ) -> Result<Response<StartResponse>, tonic::Status> {
         let req = request.into_inner();
-        println!("start cmd: {} args: {:?}", req.name, req.args);
-        Ok(Response::new(StartResponse {
-            job_id: String::from("test"),
-        }))
+        let mut worker: InMemoryWorker = Worker::new();
+        let _ = worker.start(Cmd {
+            name: req.name,
+            args: req.args,
+        });
+
+        let id = Uuid::new_v4().to_string();
+
+        Ok(Response::new(StartResponse { job_id: id }))
     }
 
     async fn stop(
@@ -64,6 +75,8 @@ impl WorkerService for WorkerServiceServerImpl {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     let addr = "0.0.0.0:50051".parse()?;
     let hello_server = WorkerServiceServerImpl::default();
     Server::builder()
