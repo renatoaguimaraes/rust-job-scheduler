@@ -13,6 +13,7 @@ name="client"
 path="./src/client.rs"
 
 [dependencies]
+libc = "0.2"
 reqwest = { version = "0.11", features = ["json"] } # reqwest with JSON parsing support
 futures = "0.3" # for async / await
 tokio = { version = "1.12.0", features = ["full"] } # for our async runtime
