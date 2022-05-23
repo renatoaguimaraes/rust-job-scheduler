@@ -38,27 +38,27 @@ pub trait Worker {
 }
 
 pub enum WorkerEnum {
-  InMemoryWorker(InMemoryWorker)
+    InMemoryWorker(InMemoryWorker),
 }
 
-impl Worker for  WorkerEnum {
-  fn start(&self, cmd: Cmd) -> Result<String, String> {
-    match self {
-      WorkerEnum::InMemoryWorker(in_memory) => in_memory.start(cmd)
+impl Worker for WorkerEnum {
+    fn start(&self, cmd: Cmd) -> Result<String, String> {
+        match self {
+            WorkerEnum::InMemoryWorker(in_memory) => in_memory.start(cmd),
+        }
     }
-  }
 
-  fn query(&self, uid: String) -> Result<Status, String> {
-    match self {
-      WorkerEnum::InMemoryWorker(in_memory) => in_memory.query(uid)
+    fn query(&self, uid: String) -> Result<Status, String> {
+        match self {
+            WorkerEnum::InMemoryWorker(in_memory) => in_memory.query(uid),
+        }
     }
-  }
 
-  fn stop(&self, uid: String) -> Result<bool, String> {
-    match self {
-      WorkerEnum::InMemoryWorker(in_memory) => in_memory.stop(uid)
+    fn stop(&self, uid: String) -> Result<bool, String> {
+        match self {
+            WorkerEnum::InMemoryWorker(in_memory) => in_memory.stop(uid),
+        }
     }
-  }
 }
 
 pub struct InMemoryWorker {

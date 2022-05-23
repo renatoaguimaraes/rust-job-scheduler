@@ -5,7 +5,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
 mod lib;
-use lib::{Cmd, Worker, InMemoryWorker, WorkerEnum};
+use lib::{Cmd, InMemoryWorker, Worker, WorkerEnum};
 
 pub mod worker {
     tonic::include_proto!("worker");
@@ -24,7 +24,7 @@ pub struct WorkerServiceServerImpl {
 impl Default for WorkerServiceServerImpl {
     fn default() -> Self {
         Self {
-            worker: WorkerEnum::InMemoryWorker(InMemoryWorker::default())
+            worker: WorkerEnum::InMemoryWorker(InMemoryWorker::default()),
         }
     }
 }
