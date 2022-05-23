@@ -32,24 +32,49 @@ use std::thread;
 use uuid::Uuid;
 
 pub trait Worker {
-    fn new() -> Self;
-    fn start(&mut self, cmd: Cmd) -> Result<String, String>;
+    fn start(&self, cmd: Cmd) -> Result<String, String>;
     fn query(&self, uid: String) -> Result<Status, String>;
     fn stop(&self, uid: String) -> Result<bool, String>;
+}
+
+pub enum WorkerEnum {
+  InMemoryWorker(InMemoryWorker)
+}
+
+impl Worker for  WorkerEnum {
+  fn start(&self, cmd: Cmd) -> Result<String, String> {
+    match self {
+      WorkerEnum::InMemoryWorker(in_memory) => in_memory.start(cmd)
+    }
+  }
+
+  fn query(&self, uid: String) -> Result<Status, String> {
+    match self {
+      WorkerEnum::InMemoryWorker(in_memory) => in_memory.query(uid)
+    }
+  }
+
+  fn stop(&self, uid: String) -> Result<bool, String> {
+    match self {
+      WorkerEnum::InMemoryWorker(in_memory) => in_memory.stop(uid)
+    }
+  }
 }
 
 pub struct InMemoryWorker {
     data: Arc<Mutex<HashMap<String, Status>>>,
 }
 
-impl Worker for InMemoryWorker {
-    fn new() -> Self {
+impl Default for InMemoryWorker {
+    fn default() -> Self {
         Self {
             data: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+}
 
-    fn start(&mut self, cmd: Cmd) -> Result<String, String> {
+impl Worker for InMemoryWorker {
+    fn start(&self, cmd: Cmd) -> Result<String, String> {
         info!("Process starting: {:?}", cmd);
         // uuid to map the process status
         let uid = Uuid::new_v4();

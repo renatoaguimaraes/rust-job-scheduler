@@ -1,11 +1,11 @@
 use env_logger;
+use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
 mod lib;
-
-use lib::{Cmd, InMemoryWorker, Worker};
+use lib::{Cmd, Worker, InMemoryWorker, WorkerEnum};
 
 pub mod worker {
     tonic::include_proto!("worker");
@@ -17,8 +17,17 @@ use worker::{
     StreamRequest, StreamResponse,
 };
 
-#[derive(Default)]
-pub struct WorkerServiceServerImpl {}
+pub struct WorkerServiceServerImpl {
+    worker: WorkerEnum,
+}
+
+impl Default for WorkerServiceServerImpl {
+    fn default() -> Self {
+        Self {
+            worker: WorkerEnum::InMemoryWorker(InMemoryWorker::default())
+        }
+    }
+}
 
 #[tonic::async_trait]
 impl WorkerService for WorkerServiceServerImpl {
@@ -27,14 +36,17 @@ impl WorkerService for WorkerServiceServerImpl {
         request: Request<StartRequest>,
     ) -> Result<Response<StartResponse>, tonic::Status> {
         let req = request.into_inner();
-        let mut worker: InMemoryWorker = Worker::new();
-        let uid = worker
-            .start(Cmd {
-                name: req.name,
-                args: req.args,
-            })
-            .unwrap();
-        Ok(Response::new(StartResponse { job_id: uid }))
+        let _ = match self.worker.start(Cmd {
+            name: req.name,
+            args: req.args,
+        }) {
+            Ok(uid) => {
+                return Ok(Response::new(StartResponse {
+                    job_id: String::from(uid),
+                }))
+            }
+            Err(msg) => return Err(tonic::Status::internal(msg)),
+        };
     }
 
     async fn stop(
@@ -42,8 +54,10 @@ impl WorkerService for WorkerServiceServerImpl {
         request: Request<StopRequest>,
     ) -> Result<Response<StopResponse>, tonic::Status> {
         let req = request.into_inner();
-        println!("stop job: {}", req.job_id);
-        Ok(Response::new(StopResponse {}))
+        match self.worker.stop(req.job_id) {
+            Ok(_) => return Ok(Response::new(StopResponse {})),
+            Err(err) => return Err(tonic::Status::internal(err.to_string())),
+        }
     }
 
     async fn query(
@@ -52,11 +66,16 @@ impl WorkerService for WorkerServiceServerImpl {
     ) -> Result<Response<QueryResponse>, tonic::Status> {
         let req = request.into_inner();
         println!("query job: {}", req.job_id);
-        Ok(Response::new(QueryResponse {
-            pid: 1,
-            exit_code: 1,
-            exited: false,
-        }))
+        match self.worker.query(req.job_id) {
+            Ok(status) => {
+                return Ok(Response::new(QueryResponse {
+                    pid: status.pid as i32,
+                    exit_code: status.exit_code,
+                    exited: status.exited,
+                }))
+            }
+            Err(err) => return Err(tonic::Status::internal(err.to_string())),
+        };
     }
 
     type StreamStream = ReceiverStream<Result<StreamResponse, Status>>;
@@ -66,8 +85,16 @@ impl WorkerService for WorkerServiceServerImpl {
         request: Request<StreamRequest>,
     ) -> Result<Response<Self::StreamStream>, tonic::Status> {
         let req = request.into_inner();
-        println!("stream job: {}", req.job_id);
-        unimplemented!()
+        let (tx, rx) = mpsc::channel(4);
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            println!("{}", req.job_id);
+            let res = StreamResponse {
+                output: String::from(""),
+            };
+            tx.send(Ok(res)).await.unwrap();
+        });
+        Ok(Response::new(ReceiverStream::new(rx)))
     }
 }
 
