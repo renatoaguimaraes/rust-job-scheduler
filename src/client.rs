@@ -5,7 +5,7 @@ pub mod worker {
 }
 
 use worker::worker_service_client::WorkerServiceClient;
-use worker::StartRequest;
+use worker::{StartRequest, StreamRequest};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,5 +26,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // sending request and waiting for response
     let response = client.start(request).await?.into_inner();
     println!("response={:?}", response);
+    // streaming a process output
+    let response = client.stream(Request::new(StreamRequest {
+        job_id: String::from("1"),
+    }));
+    let mut stream = response.await?.into_inner();
+    while let Some(feature) = stream.message().await? {
+        println!("NOTE = {:?}", feature);
+    }
     Ok(())
 }

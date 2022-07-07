@@ -21,26 +21,32 @@ pub struct Status {
     pub exited: bool,
 }
 
-use log::info;
+use log::{info, error};
 use std::collections::HashMap;
 use std::env::temp_dir;
 use std::fs::File;
 use std::process::Command;
 use std::result::Result;
+use tokio::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{thread};
 use uuid::Uuid;
+use chrono::prelude::Utc;
 
+#[tonic::async_trait]
 pub trait Worker {
     fn start(&self, cmd: Cmd) -> Result<String, String>;
     fn query(&self, uid: String) -> Result<Status, String>;
     fn stop(&self, uid: String) -> Result<bool, String>;
+    async fn stream(&self, uid: String, tx: &mut mpsc::Sender<String>);
 }
 
+#[derive(Clone)]
 pub enum WorkerEnum {
     InMemoryWorker(InMemoryWorker),
 }
 
+#[tonic::async_trait]
 impl Worker for WorkerEnum {
     fn start(&self, cmd: Cmd) -> Result<String, String> {
         match self {
@@ -59,8 +65,15 @@ impl Worker for WorkerEnum {
             WorkerEnum::InMemoryWorker(in_memory) => in_memory.stop(uid),
         }
     }
+
+    async fn stream(&self, uid: String, tx: &mut mpsc::Sender<String>) {
+        match self {
+            WorkerEnum::InMemoryWorker(in_memory) => in_memory.stream(uid, tx).await,
+        }
+    }
 }
 
+#[derive(Clone)]
 pub struct InMemoryWorker {
     data: Arc<Mutex<HashMap<String, Status>>>,
 }
@@ -73,6 +86,7 @@ impl Default for InMemoryWorker {
     }
 }
 
+#[tonic::async_trait]
 impl Worker for InMemoryWorker {
     fn start(&self, cmd: Cmd) -> Result<String, String> {
         info!("Process starting: {:?}", cmd);
@@ -154,5 +168,12 @@ impl Worker for InMemoryWorker {
                 _ => return Err(format!("Error while stop process: {}", uid)),
             };
         }
+    }
+
+    async fn stream(&self, uid: String, tx: &mut mpsc::Sender<String>) {
+      match tx.send(format!("uid: {} -> {}", uid, Utc::now().to_string())).await {
+        Ok(res) => info!("Log stream sent with success: {:?}", res),
+        Err(err) => error!("Error to send log stream {:?}", err),
+      }
     }
 }
