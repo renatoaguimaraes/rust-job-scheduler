@@ -85,13 +85,17 @@ impl WorkerService for WorkerServiceServerImpl {
     request: Request<StreamRequest>,
   ) -> Result<Response<Self::StreamStream>, tonic::Status> {
     let req = request.into_inner();
-    let (tx, rx) = mpsc::channel(4);
-    let (mut tx_log, mut rx_log) = mpsc::channel(4);
-    let tx = tx.clone();
+
+    let (tx, rx) = mpsc::channel(1);
+    let (mut tx_log, mut rx_log) = mpsc::channel(1);
 
     let worker = self.worker.clone();
     tokio::spawn(async move {
       worker.stream(req.job_id, &mut tx_log).await;
+    });
+
+    let tx = tx.clone();
+    tokio::spawn(async move {
       while let Some(msg) = rx_log.recv().await {
         let res = StreamResponse {
           output: String::from(format!("{:?}", msg)),
