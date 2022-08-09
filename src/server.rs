@@ -1,6 +1,7 @@
 use env_logger;
 use log::info;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::TrySendError;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
@@ -101,7 +102,9 @@ impl WorkerService for WorkerServiceServerImpl {
                 let res = StreamResponse {
                     output: String::from(format!("{:?}", msg)),
                 };
-                tx.send(Ok(res)).await.unwrap();
+                if let Err(TrySendError::Closed(_)) = tx.try_send(Ok(res)) {
+                    break;
+                }
             }
         });
         Ok(Response::new(ReceiverStream::new(rx)))

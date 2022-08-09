@@ -31,6 +31,7 @@ use std::result::Result;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::TrySendError;
 use uuid::Uuid;
 
 #[tonic::async_trait]
@@ -179,12 +180,10 @@ impl Worker for InMemoryWorker {
 
     async fn stream(&self, uid: String, tx: &mut mpsc::Sender<String>) {
         loop {
-            match tx
-                .send(format!("uid: {} -> {}", uid, Utc::now().to_string()))
-                .await
+            if let Err(TrySendError::Closed(_)) =
+                tx.try_send(format!("uid: {} -> {}", uid, Utc::now().to_string()))
             {
-                Ok(res) => res,
-                Err(err) => error!("Error to send log stream {:?}", err),
+                break;
             }
             thread::sleep(time::Duration::from_secs(1));
         }
