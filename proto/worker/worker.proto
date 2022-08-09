@@ -36,9 +36,23 @@ message StreamResponse {
   string output = 1;
 }
 
+message ListRequest {
+}
+
+message ProcessInfo {
+  int32 pid = 1;
+  int32 exitCode = 2;
+  bool exited = 3;
+}
+
+message ListResponse {
+  repeated ProcessInfo processes = 1;
+}
+
 service WorkerService {
   rpc Start(StartRequest) returns (StartResponse);
   rpc Stop(StopRequest) returns (StopResponse);
   rpc Query(QueryRequest) returns (QueryResponse);
   rpc Stream(StreamRequest) returns (stream StreamResponse);
+  rpc List(ListRequest) returns (ListResponse);
 }
