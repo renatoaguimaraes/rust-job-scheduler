@@ -124,7 +124,7 @@ jobs:
     - clippy
     steps:
     - name: Delete Previous drafts
-      uses: hugo19941994/delete-draft-releases@v1.0.0
+      uses: hugo19941994/delete-draft-releases@v1.0.1
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
